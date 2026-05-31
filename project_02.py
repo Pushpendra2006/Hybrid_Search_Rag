@@ -29,11 +29,11 @@ st.set_page_config(
 st.title("Hybrid RAG Assistant")
 
 st.markdown(
-    "Upload a PDF and ask questions using Hybrid RAG + Mistral-7B"
+    "Upload a PDF and ask questions using Hybrid RAG + TinyLlama"
 )
 
 
-MODEL_NAME="mistralai/Mistral-7B-Instruct-v0.1"
+MODEL_NAME="MODEL_NAME="TinyLlama/TinyLlama-1.1B-Chat-v1.0""
 
 
 @st.cache_resource
