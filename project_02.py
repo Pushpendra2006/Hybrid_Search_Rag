@@ -1,5 +1,5 @@
 import numpy as np
-from langchain.vectorstores import FAISS
+from langchain_community.vectorstores import FAISS
 from sentence_transformers import CrossEncoder
 from langchain.document_loaders import PyPDFLoader
 from langchain.embeddings import HuggingFaceEmbeddings
