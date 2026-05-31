@@ -46,25 +46,25 @@ model = AutoModelForCausalLM.from_pretrained(
 )
 
 return tokenizer, model
-```
+
 
 @st.cache_resource
 def load_embedding_model():
 
-```
+
 return HuggingFaceEmbeddings(
     model_name="sentence-transformers/all-MiniLM-L6-v2"
 )
-```
+
 
 @st.cache_resource
 def load_reranker():
 
-```
+
 return CrossEncoder(
     "cross-encoder/ms-marco-MiniLM-L-6-v2"
 )
-```
+
 
 tokenizer, model = load_model()
 
@@ -74,17 +74,17 @@ reranker = load_reranker()
 
 def tokenize(text):
 
-```
+
 return re.findall(
     r"\w+",
     text.lower()
 )
-```
+
 
 @st.cache_resource(show_spinner=False)
 def build_vector_store(pdf_path):
 
-```
+
 loader = PyPDFLoader(pdf_path)
 
 pages = loader.load()
@@ -123,7 +123,7 @@ return (
     chunk_texts,
     bm25
 )
-```
+
 
 def hybrid_search(
 query,
@@ -133,7 +133,7 @@ bm25,
 k=3
 ):
 
-```
+
 vector_results = vector_store.similarity_search(
     query,
     k=k
@@ -180,21 +180,21 @@ ranked = sorted(
 )
 
 return ranked[:k]
-```
+
 
 def build_prompt(
 query,
 retrieved_docs
 ):
 
-```
+
 context = "\n\n".join(
     doc
     for doc, score in retrieved_docs
 )
 
 return f"""
-```
+
 
 Answer ONLY using the provided context.
 
@@ -214,7 +214,7 @@ chunk_texts,
 bm25
 ):
 
-```
+
 retrieval_start = time.time()
 
 retrieved_docs = hybrid_search(
@@ -268,7 +268,7 @@ return (
     retrieval_time,
     generation_time
 )
-```
+
 
 uploaded_file = st.file_uploader(
 "Upload PDF",
@@ -277,7 +277,7 @@ type=["pdf"]
 
 if uploaded_file:
 
-```
+
 with tempfile.NamedTemporaryFile(
     delete=False,
     suffix=".pdf"
@@ -359,4 +359,4 @@ if st.button(
         ):
 
             st.write(doc)
-```
+
