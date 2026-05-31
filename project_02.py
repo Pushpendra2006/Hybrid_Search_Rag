@@ -17,11 +17,8 @@ from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.vectorstores import FAISS
 
 from langchain_huggingface import HuggingFaceEmbeddings
-
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from rank_bm25 import BM25Okapi
-
 
 st.set_page_config(
     page_title="Hybrid RAG Assistant",
