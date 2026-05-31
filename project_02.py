@@ -35,7 +35,6 @@ st.markdown(
 @st.cache_resource
 def load_model():
 
-```
 tokenizer = AutoTokenizer.from_pretrained(
     MODEL_NAME
 )
