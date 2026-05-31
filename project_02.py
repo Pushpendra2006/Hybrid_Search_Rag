@@ -35,17 +35,16 @@ st.markdown(
 @st.cache_resource
 def load_model():
 
-tokenizer = AutoTokenizer.from_pretrained(
+  tokenizer = AutoTokenizer.from_pretrained(
     MODEL_NAME
-)
+  )
 
-tokenizer.pad_token = tokenizer.eos_token
+  tokenizer.pad_token = tokenizer.eos_token
 
-model = AutoModelForCausalLM.from_pretrained(
+ model = AutoModelForCausalLM.from_pretrained(
     MODEL_NAME
-)
-
-return tokenizer, model
+  )
+   return tokenizer, model
 
 
 @st.cache_resource
