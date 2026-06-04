@@ -1,6 +1,6 @@
 # Hybrid RAG Research Assistant 
 
-[![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen?style=for-the-badge&logo=streamlit)](YOUR_STREAMLIT_LIVE_LINK_HERE)
+[![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen?style=for-the-badge&logo=streamlit)](https://hybridsearchrag-7ke2ex929xugzgtu3sfguy.streamlit.app/)
 [![Python](https://img.shields.io/badge/Python-3.9+-blue?style=for-the-badge&logo=python)](https://www.python.org)
 [![Framework](https://img.shields.io/badge/LangChain-⚡-orange?style=for-the-badge)](https://github.com/langchain-ai/langchain)
 
