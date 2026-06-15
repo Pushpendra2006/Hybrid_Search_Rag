@@ -1,7 +1,7 @@
 import time
 import re
 import tempfile
-
+import torchvision
 import numpy as np
 import streamlit as st
 import torch
