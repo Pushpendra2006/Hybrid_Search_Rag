@@ -31,8 +31,18 @@ st.markdown("Upload a PDF and ask questions using Hybrid Retrieval + TinyLlama")
 def load_model():
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
     tokenizer.pad_token = tokenizer.eos_token
-    # Fixed indentation here and added .to(device)
-    model = AutoModelForCausalLM.from_pretrained(MODEL_NAME).to(device)
+    
+    # PERFORMANCE MODIFICATION: Choose faster, lower-precision types if using GPU
+    if device == "cuda":
+        dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
+    else:
+        dtype = torch.float32
+        
+    model = AutoModelForCausalLM.from_pretrained(
+        MODEL_NAME,
+        torch_dtype=dtype,
+        low_cpu_mem_usage=True
+    ).to(device)
     return tokenizer, model
 
 @st.cache_resource
@@ -66,7 +76,8 @@ def build_vector_store(pdf_path):
     
     return vector_store, documents, chunk_texts, bm25
 
-def hybrid_search(query, vector_store, chunk_texts, bm25, k=3):
+# PERFORMANCE MODIFICATION: Changed default k from 3 to 2 to minimize cross-encoder time
+def hybrid_search(query, vector_store, chunk_texts, bm25, k=2):
     vector_results = vector_store.similarity_search(query, k=k)
     semantic_chunks = [doc.page_content for doc in vector_results]
     
@@ -102,14 +113,16 @@ def generate_answer(query, vector_store, chunk_texts, bm25):
     inputs = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=2048).to(device)
     
     generation_start = time.time()
-    outputs = model.generate(
-        **inputs,
-        max_new_tokens=200,
-        temperature=0.7,
-        top_p=0.9,
-        do_sample=True,
-        pad_token_id=tokenizer.pad_token_id
-    )
+    
+    # PERFORMANCE MODIFICATION: inference_mode context manager + greedy generation parameters
+    with torch.inference_mode():
+        outputs = model.generate(
+            **inputs,
+            max_new_tokens=120,     # Reduced slightly to keep answers concise and fast
+            do_sample=False,        # Removed sampling math overhead (Greedy Decoding)
+            use_cache=True,         # Accelerates multi-token generation
+            pad_token_id=tokenizer.pad_token_id
+        )
     generation_time = time.time() - generation_start
     
     # Decodes only the new tokens generated, skipping the system prompt
@@ -121,7 +134,6 @@ def generate_answer(query, vector_store, chunk_texts, bm25):
 uploaded_file = st.file_uploader("Upload PDF", type=["pdf"])
 
 if uploaded_file:
-    # Safely handle file upload and processing without breaking indentation
     if "vector_store" not in st.session_state:
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
             tmp.write(uploaded_file.read())
