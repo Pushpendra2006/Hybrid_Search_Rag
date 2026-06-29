@@ -16,8 +16,8 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from rank_bm25 import BM25Okapi
 
-MODEL_NAME = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
-device = "cuda" if torch.cuda.is_available() else "cpu"
+MODEL_NAME="TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+device="cuda" if torch.cuda.is_available() else "cpu"
 
 st.set_page_config(
     page_title="Hybrid RAG Assistant",
@@ -29,15 +29,15 @@ st.markdown("Upload a PDF and ask questions using Hybrid Retrieval + TinyLlama")
 
 @st.cache_resource
 def load_model():
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-    tokenizer.pad_token = tokenizer.eos_token
+    tokenizer=AutoTokenizer.from_pretrained(MODEL_NAME)
+    tokenizer.pad_token=tokenizer.eos_token
     
-    if device == "cuda":
-        dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
+    if device=="cuda":
+        dtype=torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
     else:
-        dtype = torch.float32
+        dtype=torch.float32
         
-    model = AutoModelForCausalLM.from_pretrained(
+    model=AutoModelForCausalLM.from_pretrained(
         MODEL_NAME,
         torch_dtype=dtype,
         low_cpu_mem_usage=True
@@ -76,23 +76,19 @@ def build_vector_store(pdf_path):
     return vector_store, documents, chunk_texts, bm25
 
 def hybrid_search(query, vector_store, chunk_texts, bm25, k=2):
-    vector_results = vector_store.similarity_search(query, k=k)
-    semantic_chunks = [doc.page_content for doc in vector_results]
-    
-    bm25_scores = bm25.get_scores(tokenize(query))
-    top_indices = np.argsort(bm25_scores)[::-1][:k]
-    keyword_chunks = [chunk_texts[i] for i in top_indices]
-    
-    candidates = list(set(semantic_chunks + keyword_chunks))
-    pairs = [[query, chunk] for chunk in candidates]
-    
-    scores = reranker.predict(pairs)
-    ranked = sorted(zip(candidates, scores), key=lambda x: x[1], reverse=True)
-    
+    vector_results=vector_store.similarity_search(query, k=k)
+    semantic_chunks=[doc.page_content for doc in vector_results]
+    bm25_scores=bm25.get_scores(tokenize(query))
+    top_indices=np.argsort(bm25_scores)[::-1][:k]
+    keyword_chunks=[chunk_texts[i] for i in top_indices]
+    candidates=list(set(semantic_chunks + keyword_chunks))
+    pairs=[[query, chunk] for chunk in candidates]
+    scores=reranker.predict(pairs)
+    ranked=sorted(zip(candidates, scores), key=lambda x: x[1], reverse=True)
     return ranked[:k]
 
-def build_prompt(query, retrieved_docs):
-    context = "\n\n".join(doc for doc, score in retrieved_docs)
+def build_prompt(query,retrieved_docs):
+    context="\n\n".join(doc for doc, score in retrieved_docs)
     return f"""<|system|>
 Answer ONLY using the provided context. If the context does not contain the answer, say "I don't know".
 Context:
@@ -111,10 +107,6 @@ def evaluate_rag_response(query, context, answer):
     if "i don't know" in answer.lower():
         return {"Faithfulness": 1.0, "Answer Relevance": 0.0}
         
-    # 1. Faithfulness: Does the answer match the retrieved context?
-    faithfulness_score = reranker.predict([context, answer])
-    # 2. Answer Relevance: Does the answer address the user query?
-    relevance_score = reranker.predict([query, answer])
     
     # Sigmoid function to normalize MS-Marco logit outputs between 0 and 1
     def normalize(score):
@@ -129,10 +121,9 @@ def generate_answer(query, vector_store, chunk_texts, bm25):
     retrieval_start = time.time()
     retrieved_docs = hybrid_search(query, vector_store, chunk_texts, bm25)
     retrieval_time = time.time() - retrieval_start
-    
-    context = "\n\n".join(doc for doc, score in retrieved_docs)
-    prompt = build_prompt(query, retrieved_docs)
-    inputs = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=2048).to(device)
+    context = "\n\n".join(doc for doc,score in retrieved_docs)
+    prompt=build_prompt(query, retrieved_docs)
+    inputs=tokenizer(prompt, return_tensors="pt", truncation=True, max_length=2048).to(device)
     
     generation_start = time.time()
     with torch.inference_mode():
@@ -144,16 +135,12 @@ def generate_answer(query, vector_store, chunk_texts, bm25):
             pad_token_id=tokenizer.pad_token_id
         )
     generation_time = time.time() - generation_start
-    
     response = tokenizer.decode(outputs[0][inputs.input_ids.shape[1]:], skip_special_tokens=True).strip()
-    
     # ADDED: Calculate metrics evaluation step
     metrics = evaluate_rag_response(query, context, response)
-    
     return response, retrieved_docs, retrieval_time, generation_time, metrics
 
-# --- Streamlit UI Flow ---
-uploaded_file = st.file_uploader("Upload PDF", type=["pdf"])
+uploaded_file=st.file_uploader("Upload PDF", type=["pdf"])
 
 if uploaded_file:
     if "vector_store" not in st.session_state:
@@ -168,12 +155,12 @@ if uploaded_file:
             st.session_state.bm25 = bm
             st.success("PDF processed successfully!")
 
-    query = st.text_input("Ask a question")
+    query=st.text_input("Ask a question")
     
     if st.button("Generate Answer") and query:
         if "vector_store" in st.session_state:
             with st.spinner("Thinking..."):
-                answer, sources, retrieval_time, generation_time, metrics = generate_answer(
+                answer,sources,retrieval_time,generation_time,metrics=generate_answer(
                     query,
                     st.session_state.vector_store,
                     st.session_state.chunk_texts,
@@ -183,17 +170,16 @@ if uploaded_file:
             st.subheader("Answer")
             st.write(answer)
             
-            # ADDED: Performance & Quality Metrics Dashboard Layout
             st.subheader("Evaluation Metrics")
             met1, met2, met3, met4 = st.columns(4)
-            met1.metric("Faithfulness (Groundedness)", f"{metrics['Faithfulness']*100:.1f}%")
-            met2.metric("Answer Relevance", f"{metrics['Answer Relevance']*100:.1f}%")
-            met3.metric("Retrieval Latency", f"{retrieval_time:.2f}s")
-            met4.metric("Generation Latency", f"{generation_time:.2f}s")
+            met1.metric("Faithfulness(Groundedness)",f"{metrics['Faithfulness']*100:.1f}%")
+            met2.metric("Answer Relevance",f"{metrics['Answer Relevance']*100:.1f}%")
+            met3.metric("Retrieval Latency",f"{retrieval_time:.2f}s")
+            met4.metric("Generation Latency",f"{generation_time:.2f}s")
             
             st.subheader("Retrieved Sources")
-            for idx, (doc, score) in enumerate(sources, start=1):
-                with st.expander(f"Source {idx} | Reranker Score: {score:.4f}"):
+            for idx, (doc,score) in enumerate(sources, start=1):
+                with st.expander(f"Source {idx} | Reranker Score:{score:.4f}"):
                     st.write(doc)
         else: 
             st.error("Please upload a PDF first.")
