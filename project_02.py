@@ -32,7 +32,6 @@ def load_model():
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
     tokenizer.pad_token = tokenizer.eos_token
     
-    # PERFORMANCE MODIFICATION: Choose faster, lower-precision types if using GPU
     if device == "cuda":
         dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
     else:
@@ -76,7 +75,6 @@ def build_vector_store(pdf_path):
     
     return vector_store, documents, chunk_texts, bm25
 
-# PERFORMANCE MODIFICATION: Changed default k from 3 to 2 to minimize cross-encoder time
 def hybrid_search(query, vector_store, chunk_texts, bm25, k=2):
     vector_results = vector_store.similarity_search(query, k=k)
     semantic_chunks = [doc.page_content for doc in vector_results]
@@ -104,31 +102,55 @@ Context:
 <|assistant|>
 """
 
+# ADDED: Evaluation Metrics Function
+def evaluate_rag_response(query, context, answer):
+    """
+    Computes heuristic evaluation scores using the pre-loaded cross-encoder.
+    MS-Marco cross-encoder outputs can range wildly, so we map them to a 0-100% scale safely.
+    """
+    if "i don't know" in answer.lower():
+        return {"Faithfulness": 1.0, "Answer Relevance": 0.0}
+        
+    # 1. Faithfulness: Does the answer match the retrieved context?
+    faithfulness_score = reranker.predict([context, answer])
+    # 2. Answer Relevance: Does the answer address the user query?
+    relevance_score = reranker.predict([query, answer])
+    
+    # Sigmoid function to normalize MS-Marco logit outputs between 0 and 1
+    def normalize(score):
+        return 1 / (1 + np.exp(-score))
+
+    return {
+        "Faithfulness": float(normalize(faithfulness_score)),
+        "Answer Relevance": float(normalize(relevance_score))
+    }
+
 def generate_answer(query, vector_store, chunk_texts, bm25):
     retrieval_start = time.time()
     retrieved_docs = hybrid_search(query, vector_store, chunk_texts, bm25)
     retrieval_time = time.time() - retrieval_start
     
+    context = "\n\n".join(doc for doc, score in retrieved_docs)
     prompt = build_prompt(query, retrieved_docs)
     inputs = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=2048).to(device)
     
     generation_start = time.time()
-    
-    # PERFORMANCE MODIFICATION: inference_mode context manager + greedy generation parameters
     with torch.inference_mode():
         outputs = model.generate(
             **inputs,
-            max_new_tokens=120,     # Reduced slightly to keep answers concise and fast
-            do_sample=False,        # Removed sampling math overhead (Greedy Decoding)
-            use_cache=True,         # Accelerates multi-token generation
+            max_new_tokens=120,
+            do_sample=False,
+            use_cache=True,
             pad_token_id=tokenizer.pad_token_id
         )
     generation_time = time.time() - generation_start
     
-    # Decodes only the new tokens generated, skipping the system prompt
-    response = tokenizer.decode(outputs[0][inputs.input_ids.shape[1]:], skip_special_tokens=True)
+    response = tokenizer.decode(outputs[0][inputs.input_ids.shape[1]:], skip_special_tokens=True).strip()
     
-    return response, retrieved_docs, retrieval_time, generation_time
+    # ADDED: Calculate metrics evaluation step
+    metrics = evaluate_rag_response(query, context, response)
+    
+    return response, retrieved_docs, retrieval_time, generation_time, metrics
 
 # --- Streamlit UI Flow ---
 uploaded_file = st.file_uploader("Upload PDF", type=["pdf"])
@@ -151,7 +173,7 @@ if uploaded_file:
     if st.button("Generate Answer") and query:
         if "vector_store" in st.session_state:
             with st.spinner("Thinking..."):
-                answer, sources, retrieval_time, generation_time = generate_answer(
+                answer, sources, retrieval_time, generation_time, metrics = generate_answer(
                     query,
                     st.session_state.vector_store,
                     st.session_state.chunk_texts,
@@ -161,13 +183,17 @@ if uploaded_file:
             st.subheader("Answer")
             st.write(answer)
             
-            col1, col2 = st.columns(2)
-            col1.metric("Retrieval Time", f"{retrieval_time:.2f}s")
-            col2.metric("Generation Time", f"{generation_time:.2f}s")
+            # ADDED: Performance & Quality Metrics Dashboard Layout
+            st.subheader("Evaluation Metrics")
+            met1, met2, met3, met4 = st.columns(4)
+            met1.metric("Faithfulness (Groundedness)", f"{metrics['Faithfulness']*100:.1f}%")
+            met2.metric("Answer Relevance", f"{metrics['Answer Relevance']*100:.1f}%")
+            met3.metric("Retrieval Latency", f"{retrieval_time:.2f}s")
+            met4.metric("Generation Latency", f"{generation_time:.2f}s")
             
             st.subheader("Retrieved Sources")
             for idx, (doc, score) in enumerate(sources, start=1):
-                with st.expander(f"Source {idx} | Score: {score:.4f}"):
+                with st.expander(f"Source {idx} | Reranker Score: {score:.4f}"):
                     st.write(doc)
-        else:
+        else: 
             st.error("Please upload a PDF first.")
