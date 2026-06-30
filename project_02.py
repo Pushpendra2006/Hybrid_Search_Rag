@@ -51,11 +51,10 @@ def load_embedding_model():
 @st.cache_resource
 def load_reranker():
     return CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
-
-# Initialize models
-tokenizer, model = load_model()
-embedding_model = load_embedding_model()
-reranker = load_reranker()
+    
+tokenizer,model=load_model()
+embedding_model=load_embedding_model()
+reranker=load_reranker()
 
 def tokenize(text):
     return re.findall(r"\w+", text.lower())
