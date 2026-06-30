@@ -5,15 +5,12 @@ import torchvision
 import numpy as np
 import streamlit as st
 import torch
-
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from sentence_transformers import CrossEncoder
-
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-
 from rank_bm25 import BM25Okapi
 
 MODEL_NAME="TinyLlama/TinyLlama-1.1B-Chat-v1.0"
