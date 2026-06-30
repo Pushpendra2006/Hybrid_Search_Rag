@@ -62,19 +62,16 @@ def tokenize(text):
 
 @st.cache_resource(show_spinner=False)
 def build_vector_store(pdf_path):
-    loader = PyPDFLoader(pdf_path)
-    pages = loader.load()
-    
-    splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
-    documents = splitter.split_documents(pages)
-    
-    vector_store = FAISS.from_documents(documents, embedding_model)
-    chunk_texts = [doc.page_content for doc in documents]
-    tokenized_chunks = [tokenize(text) for text in chunk_texts]
-    bm25 = BM25Okapi(tokenized_chunks)
-    
+    loader=PyPDFLoader(pdf_path)
+    pages=loader.load()
+    splitter=RecursiveCharacterTextSplitter(chunk_size=500,chunk_overlap=100)
+    documents=splitter.split_documents(pages)
+    vector_store=FAISS.from_documents(documents, embedding_model)
+    chunk_texts=[doc.page_content for doc in documents]
+    tokenized_chunks=[tokenize(text) for text in chunk_texts]
+    bm25=BM25Okapi(tokenized_chunks)
     return vector_store, documents, chunk_texts, bm25
-
+    
 def hybrid_search(query, vector_store, chunk_texts, bm25, k=2):
     vector_results=vector_store.similarity_search(query, k=k)
     semantic_chunks=[doc.page_content for doc in vector_results]
