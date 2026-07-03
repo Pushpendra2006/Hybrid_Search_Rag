@@ -66,9 +66,9 @@ def build_vector_store(pdf_path):
     chunk_texts=[doc.page_content for doc in documents]
     tokenized_chunks=[tokenize(text) for text in chunk_texts]
     bm25=BM25Okapi(tokenized_chunks)
-    return vector_store, documents, chunk_texts, bm25
+    return vector_store,documents,chunk_texts,bm25
     
-def hybrid_search(query, vector_store, chunk_texts, bm25, k=2):
+def hybrid_search(query,vector_store,chunk_texts,bm25,k=2):
     vector_results=vector_store.similarity_search(query, k=k)
     semantic_chunks=[doc.page_content for doc in vector_results]
     bm25_scores=bm25.get_scores(tokenize(query))
