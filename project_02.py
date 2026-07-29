@@ -91,25 +91,17 @@ Context:
 <|assistant|>
 """
 
-# ADDED: Evaluation Metrics Function
-def evaluate_rag_response(query, context, answer):
-    """
-    Computes heuristic evaluation scores using the pre-loaded cross-encoder.
-    MS-Marco cross-encoder outputs can range wildly, so we map them to a 0-100% scale safely.
-    """
+
+def evaluate_rag_response(query,context,answer)
     if "i don't know" in answer.lower():
-        return {"Faithfulness": 1.0, "Answer Relevance": 0.0}
-        
-    
-    # Sigmoid function to normalize MS-Marco logit outputs between 0 and 1
+        return {"Faithfulness": 1.0, "Answer Relevance": 0.0}   
     def normalize(score):
         return 1 / (1 + np.exp(-score))
-
-    return {
+    return 
+    {
         "Faithfulness": float(normalize(faithfulness_score)),
         "Answer Relevance": float(normalize(relevance_score))
     }
-
 def generate_answer(query, vector_store, chunk_texts, bm25):
     retrieval_start = time.time()
     retrieved_docs = hybrid_search(query, vector_store, chunk_texts, bm25)
