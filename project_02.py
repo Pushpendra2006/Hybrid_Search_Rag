@@ -120,13 +120,11 @@ def generate_answer(query, vector_store, chunk_texts, bm25):
             pad_token_id=tokenizer.pad_token_id
         )
     generation_time = time.time() - generation_start
-    response = tokenizer.decode(outputs[0][inputs.input_ids.shape[1]:], skip_special_tokens=True).strip()
-    # ADDED: Calculate metrics evaluation step
-    metrics = evaluate_rag_response(query, context, response)
-    return response, retrieved_docs, retrieval_time, generation_time, metrics
+    response=tokenizer.decode(outputs[0][inputs.input_ids.shape[1]:],skip_special_tokens=True).strip()
+    metrics=evaluate_rag_response(query,context,response)
+    return response,retrieved_docs,retrieval_time,generation_time,metrics
 
 uploaded_file=st.file_uploader("Upload PDF", type=["pdf"])
-
 if uploaded_file:
     if "vector_store" not in st.session_state:
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
@@ -141,7 +139,6 @@ if uploaded_file:
             st.success("PDF processed successfully!")
 
     query=st.text_input("Ask a question")
-    
     if st.button("Generate Answer") and query:
         if "vector_store" in st.session_state:
             with st.spinner("Thinking..."):
@@ -156,7 +153,7 @@ if uploaded_file:
             st.write(answer)
             
             st.subheader("Evaluation Metrics")
-            met1, met2, met3, met4 = st.columns(4)
+            met1,met2,met3,met4=st.columns(4)
             met1.metric("Faithfulness(Groundedness)",f"{metrics['Faithfulness']*100:.1f}%")
             met2.metric("Answer Relevance",f"{metrics['Answer Relevance']*100:.1f}%")
             met3.metric("Retrieval Latency",f"{retrieval_time:.2f}s")
